@@ -8,7 +8,7 @@ st.set_page_config(page_title="Netflix Movie Recommendation App", layout="wide")
 st.title("Netflix Movie Recommendation App")
 
 # Load data
-df = pd.read_csv("Netflix/clean_movies.csv")
+df = pd.read_csv("clean_movies.csv")
 
 # Basic cleaning
 df = df.dropna(subset=["Title", "Overview", "Genre"])
