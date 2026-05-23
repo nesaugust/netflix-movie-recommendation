@@ -10,57 +10,82 @@ st.set_page_config(
 )
 
 # =========================
-# CSS DESIGN
+# CUSTOM CSS
 # =========================
 st.markdown("""
 <style>
 .stApp {
-    background-color: #141414;
+    background:
+        linear-gradient(rgba(0,0,0,0.86), rgba(0,0,0,0.92)),
+        url("https://images.unsplash.com/photo-1489599849927-2ee91cede3ba");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
     color: white;
 }
 
-h1, h2, h3 {
-    color: #ffffff;
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #111111, #1f1f1f);
+    border-right: 1px solid #333333;
 }
 
-[data-testid="stSidebar"] {
-    background-color: #1f1f1f;
-    padding: 20px;
+h1 {
+    color: #ffffff;
+    font-size: 48px;
+    font-weight: 800;
+}
+
+h2, h3 {
+    color: #ffffff;
 }
 
 .stButton>button {
     background-color: #E50914;
     color: white;
-    border-radius: 8px;
+    border-radius: 10px;
     border: none;
-    padding: 10px 22px;
+    padding: 12px 26px;
     font-weight: bold;
+    transition: 0.3s;
 }
 
 .stButton>button:hover {
     background-color: #b20710;
     color: white;
+    transform: scale(1.03);
 }
 
 .movie-card {
-    background-color: #1f1f1f;
-    padding: 18px;
-    border-radius: 15px;
-    margin-bottom: 20px;
+    background: rgba(31, 31, 31, 0.88);
+    padding: 22px;
+    border-radius: 18px;
+    margin-bottom: 24px;
     border: 1px solid #333333;
+    box-shadow: 0px 8px 25px rgba(0,0,0,0.45);
 }
 
-.metric-card {
-    background-color: #1f1f1f;
-    padding: 20px;
-    border-radius: 12px;
-    text-align: center;
+.movie-card:hover {
+    border: 1px solid #E50914;
+}
+
+.hero-box {
+    background: rgba(0,0,0,0.58);
+    padding: 35px;
+    border-radius: 22px;
+    margin-bottom: 25px;
+    border: 1px solid #333333;
+    box-shadow: 0px 8px 30px rgba(0,0,0,0.55);
 }
 
 .footer {
     text-align: center;
-    color: gray;
+    color: #aaaaaa;
     margin-top: 50px;
+    font-size: 14px;
+}
+
+.small-text {
+    color: #bbbbbb;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -71,9 +96,9 @@ h1, h2, h3 {
 df = pd.read_csv("clean_movies.csv")
 
 df = df.dropna(subset=["Title", "Overview", "Genre"])
+df["Title"] = df["Title"].astype(str)
 df["Overview"] = df["Overview"].astype(str)
 df["Genre"] = df["Genre"].astype(str)
-df["Title"] = df["Title"].astype(str)
 
 if "Vote_Average" in df.columns:
     df["Vote_Average"] = pd.to_numeric(df["Vote_Average"], errors="coerce")
@@ -81,11 +106,53 @@ if "Vote_Average" in df.columns:
 if "Popularity" in df.columns:
     df["Popularity"] = pd.to_numeric(df["Popularity"], errors="coerce")
 
+# =========================
+# LANGUAGE FULL NAME
+# =========================
+language_map = {
+    "en": "English",
+    "ko": "Korean",
+    "ja": "Japanese",
+    "fr": "French",
+    "es": "Spanish",
+    "de": "German",
+    "it": "Italian",
+    "zh": "Chinese",
+    "cn": "Chinese",
+    "hi": "Hindi",
+    "id": "Indonesian",
+    "ru": "Russian",
+    "th": "Thai",
+    "pt": "Portuguese",
+    "tr": "Turkish",
+    "ar": "Arabic",
+    "da": "Danish",
+    "sv": "Swedish",
+    "nl": "Dutch",
+    "pl": "Polish",
+    "no": "Norwegian",
+    "fi": "Finnish",
+    "cs": "Czech",
+    "bn": "Bengali",
+    "ca": "Catalan",
+    "te": "Telugu",
+    "ta": "Tamil",
+    "ml": "Malayalam",
+    "mr": "Marathi",
+    "el": "Greek",
+    "he": "Hebrew",
+    "ro": "Romanian",
+    "uk": "Ukrainian",
+    "vi": "Vietnamese"
+}
+
+df["Language_Full"] = df["Original_Language"].map(language_map).fillna(df["Original_Language"])
+
 df["Content"] = df["Overview"].str.lower() + " " + df["Genre"].str.lower()
 df = df.reset_index(drop=True)
 
 # =========================
-# EXTRACT INDIVIDUAL GENRES
+# GENRE LIST
 # =========================
 all_genres = sorted(
     set(
@@ -100,20 +167,16 @@ all_genres = sorted(
 # =========================
 tfidf = TfidfVectorizer(stop_words="english", max_features=3000)
 tfidf_matrix = tfidf.fit_transform(df["Content"])
-
 indices = pd.Series(df.index, index=df["Title"]).drop_duplicates()
 
 def recommend_movies(title, num_recommendations=5):
     idx = indices[title]
-
     sim_scores = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
-
     top_indices = sim_scores.argsort()[-num_recommendations-1:-1][::-1]
     scores = sim_scores[top_indices]
 
     results = df.iloc[top_indices].copy()
     results["Similarity_Score"] = scores
-
     return results
 
 # =========================
@@ -143,23 +206,27 @@ with st.sidebar:
         step=0.5
     )
 
-    if "Original_Language" in df.columns:
-        languages = sorted(df["Original_Language"].dropna().unique().tolist())
-        selected_language = st.selectbox(
-            "Filter by Language",
-            ["All"] + languages
-        )
-    else:
-        selected_language = "All"
+    languages = sorted(df["Language_Full"].dropna().unique().tolist())
+
+    selected_language = st.selectbox(
+        "Filter by Language",
+        ["All"] + languages
+    )
 
     st.markdown("---")
     st.caption("Built using NLP, TF-IDF, and Streamlit")
 
 # =========================
-# HEADER
+# HERO
 # =========================
-st.markdown("# 🎬 Netflix Movie Recommendation App")
-st.write("Find similar movies based on storyline and genre using NLP.")
+st.markdown("""
+<div class="hero-box">
+    <h1>🎬 Netflix Movie Recommendation App</h1>
+    <p class="small-text">
+        Discover similar movies based on storyline, genre, and content similarity using NLP.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns(3)
 
@@ -170,15 +237,12 @@ with col2:
     st.metric("Total Genres", len(all_genres))
 
 with col3:
-    if "Original_Language" in df.columns:
-        st.metric("Languages", df["Original_Language"].nunique())
-    else:
-        st.metric("Languages", "N/A")
+    st.metric("Languages", df["Language_Full"].nunique())
 
 st.divider()
 
 # =========================
-# FILTERED DATA
+# FILTER DATA
 # =========================
 filtered_df = df.copy()
 
@@ -195,8 +259,8 @@ if selected_genres:
 if "Vote_Average" in filtered_df.columns:
     filtered_df = filtered_df[filtered_df["Vote_Average"] >= min_rating]
 
-if selected_language != "All" and "Original_Language" in filtered_df.columns:
-    filtered_df = filtered_df[filtered_df["Original_Language"] == selected_language]
+if selected_language != "All":
+    filtered_df = filtered_df[filtered_df["Language_Full"] == selected_language]
 
 # =========================
 # TABS
@@ -206,7 +270,7 @@ tab1, tab2, tab3, tab4 = st.tabs(
 )
 
 # =========================
-# TAB 1: RECOMMENDATION
+# RECOMMENDATION TAB
 # =========================
 with tab1:
     st.subheader("🎯 Movie Recommendation")
@@ -240,11 +304,12 @@ with tab1:
                     if "Poster_Url" in df.columns and pd.notna(row["Poster_Url"]):
                         st.image(row["Poster_Url"], width=170)
                     else:
-                        st.write("No poster")
+                        st.write("No poster available")
 
                 with col_text:
                     st.markdown(f"### {row['Title']}")
                     st.write(f"**Genre:** {row['Genre']}")
+                    st.write(f"**Language:** {row['Language_Full']}")
 
                     if "Vote_Average" in df.columns:
                         rating = row["Vote_Average"]
@@ -261,7 +326,7 @@ with tab1:
                 st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================
-# TAB 2: TRENDING
+# TRENDING TAB
 # =========================
 with tab2:
     st.subheader("🔥 Trending Movies")
@@ -270,6 +335,8 @@ with tab2:
         trending = filtered_df.sort_values("Popularity", ascending=False).head(10)
 
         for _, row in trending.iterrows():
+            st.markdown('<div class="movie-card">', unsafe_allow_html=True)
+
             col_img, col_text = st.columns([1, 4])
 
             with col_img:
@@ -279,6 +346,7 @@ with tab2:
             with col_text:
                 st.markdown(f"### {row['Title']}")
                 st.write(f"**Genre:** {row['Genre']}")
+                st.write(f"**Language:** {row['Language_Full']}")
                 st.write(f"**Popularity:** {row['Popularity']}")
 
                 if "Vote_Average" in df.columns:
@@ -286,12 +354,12 @@ with tab2:
 
                 st.write(row["Overview"])
 
-            st.divider()
+            st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.warning("Popularity column not found.")
 
 # =========================
-# TAB 3: TOP RATED
+# TOP RATED TAB
 # =========================
 with tab3:
     st.subheader("⭐ Top Rated Movies")
@@ -300,6 +368,8 @@ with tab3:
         top_rated = filtered_df.sort_values("Vote_Average", ascending=False).head(10)
 
         for _, row in top_rated.iterrows():
+            st.markdown('<div class="movie-card">', unsafe_allow_html=True)
+
             col_img, col_text = st.columns([1, 4])
 
             with col_img:
@@ -309,15 +379,16 @@ with tab3:
             with col_text:
                 st.markdown(f"### {row['Title']}")
                 st.write(f"**Genre:** {row['Genre']}")
+                st.write(f"**Language:** {row['Language_Full']}")
                 st.write(f"**Rating:** {row['Vote_Average']} ⭐")
                 st.write(row["Overview"])
 
-            st.divider()
+            st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.warning("Vote_Average column not found.")
 
 # =========================
-# TAB 4: ANALYTICS
+# ANALYTICS TAB
 # =========================
 with tab4:
     st.subheader("📊 Movie Analytics")
@@ -335,10 +406,9 @@ with tab4:
         st.bar_chart(genre_counts)
 
     with col2:
-        if "Original_Language" in df.columns:
-            st.write("Top Languages")
-            language_counts = df["Original_Language"].value_counts().head(10)
-            st.bar_chart(language_counts)
+        st.write("Top Languages")
+        language_counts = df["Language_Full"].value_counts().head(10)
+        st.bar_chart(language_counts)
 
     if "Vote_Average" in df.columns:
         st.write("Rating Distribution")
