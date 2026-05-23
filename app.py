@@ -28,7 +28,7 @@ html, body, [class*="css"] {
 }
 
 .block-container {
-    padding-top: 1rem;
+    padding-top: 2rem;
     max-width: 1100px;
 }
 
@@ -40,8 +40,8 @@ html, body, [class*="css"] {
 .topbar {
     border-top: 2px solid #E50914;
     border-bottom: 1px solid #2b2b2b;
-    padding: 16px 24px;
-    margin: -20px -20px 30px -20px;
+    padding: 24px 24px 18px 24px;
+    margin: 0 0 30px 0;
     background: #050505;
     display: flex;
     justify-content: space-between;
